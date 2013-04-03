@@ -82,18 +82,46 @@ function loadUserProgress() {
 
 pybossa.taskLoaded(function(task, deferred) {
     if ( !$.isEmptyObject(task) ) {
-        // load message from task 
-        var msg = $('<p/>');
-        // continue as soon as the message is loaded
-        msg.text(task.info.message);
-        deferred.resolve(task);
-        msg.addClass('lead');
-        task.info.msg = msg;
+        // Create the candidate answer
         task.info.answer = {'task_id': task.id,
-                            'arabic': task.info.message,
+                            'arabic': 'None',
                             'english': 'spam',
                             'arabicLocation': 'None',
                             'englishLocation': 'None'};
+
+        // load message from task 
+        var msg = $('<p/>');
+        var all_html = '';
+        var all_text = '';
+        msg.attr("dir", "rtl");
+        // continue as soon as the message is loaded
+        if (task.info.msgs_html) {
+            for (var i=0;i<task.info.msgs_html.length;i++) {
+                all_html += task.info.msgs_html[i];
+            }
+            //msg.text(task.info.all_html);
+            task.info.answer.arabic = all_html;
+        }
+        if (task.info.msgs_text) {
+            for (var i=0;i<task.info.msgs_text.length;i++) {
+                all_text += task.info.msgs_text[i];
+            }
+            //msg.text(all_text);
+            task.info.answer.arabic = all_text;
+
+            if ((all_html != '') && (all_text != '')) {
+                msg.html("<h2>HTML version</h2><hr>" + all_html + "<br/><h2>Plain Text Version</h2><hr>" + all_text);
+            }
+            if ((all_html != '') && (all_text == '')) {
+                msg.html(all_html);
+            }
+            if ((all_html == '') && (all_text != '')) {
+                msg.html(all_text);
+            }
+        }
+        deferred.resolve(task);
+        //msg.addClass('lead');
+        task.info.msg = msg;
     }
     else {
         deferred.resolve(task);
