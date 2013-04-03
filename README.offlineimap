@@ -1,0 +1,54 @@
+* Send the emails
+
+syriaspeaking@gmail.com
+
+* Account on local computer
+
+Host: 151.236.222.88
+User: pybossa
+
+* Get the emails to local computer
+
+We want a tool that can automatically access the gmail account and
+store all (new) messages on our local server.
+
+Using offlineimap:
+
+ http://offlineimap.org/
+
+ mkdir -p ~/local/src
+ cd ~/local/src
+ git clone git://github.com/OfflineIMAP/offlineimap.git
+ offlineimap-git
+
+Simple config file in ~/.offlineimaprc.
+
+-----
+[general]
+accounts = SyriaSpeaking
+
+[Account SyriaSpeaking]
+localrepository = Local
+remoterepository = Remote
+
+[Repository Local]
+type = Maildir
+localfolders = ~/pybossa/SyriaSpeakingGmail
+
+[Repository Remote]
+type = Gmail
+remoteuser = syriaspeaking@gmail.com
+sslcacertfile = /etc/ssl/certs/ca-certificates.crt
+folderfilter = lambda folder: folder in ['INBOX']
+-----
+
+Then simply run script to get mail:
+
+  ~/local/src/offlineimap-git/offlineimap.py
+
+and it will download messages from gmail and put them in a Maildir
+format in ~/pybossa/SyriaSpeakingGmail/INBOX/.
+
+For now, you must enter gmail password to retrieve messages. If we are 
+sure about security.
+
