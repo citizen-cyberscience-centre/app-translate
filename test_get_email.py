@@ -97,8 +97,9 @@ def do_pybossa(message):
             continue
             
         assert not m.is_multipart()
-        
-        payload = m.get_payload(decode=True)
+
+        payload = unicode(m.get_payload(decode=False))
+
         logger.debug('PAYLOAD:  %s...' % payload[:30])
 
         if content_type == 'text/plain':

@@ -117,6 +117,8 @@ def run(app_config, options):
 
     def create_msg_task(app, msg, question):
         # Data for the tasks
+        # msgs_text and msgs_html are lists, hence 'msgs' not 'msg'.
+        # msg_subject and msg_date are simple strings.
         task_info = dict(question=question,
                          n_answers=options.n_answers,
                          msgs_text=msg['msgs_text'],

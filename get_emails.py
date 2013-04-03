@@ -22,11 +22,13 @@ import sys
 import mailbox
 import email.Errors
 
-if 0:
-    DEBUG = True
+ch = logging.StreamHandler()
+logger.addHandler(ch)
+
+DEBUG = '--debug' in sys.argv
+if DEBUG:
     logger.setLevel(10)
-else:
-    DEBUG = False
+
 
 #------------------------------------------------------------------------------
 # Constants
@@ -70,7 +72,7 @@ def do_pybossa(message):
             
         assert not m.is_multipart()
         
-        payload = m.get_payload(decode=True)
+        payload = unicode(m.get_payload(decode=False))
         logger.debug('PAYLOAD:  %s...' % payload[:30])
 
         if content_type == 'text/plain':
@@ -83,6 +85,8 @@ def do_pybossa(message):
         print
 
     if len(texts) or len(htmls):
+        # msgs_text and msgs_html are lists, hence 'msgs' not 'msg'.
+        # msg_subject and msg_date are simple strings.
         ret = {'msgs_text': texts,
                'msgs_html': htmls,
                'msg_subject': message['subject'],
