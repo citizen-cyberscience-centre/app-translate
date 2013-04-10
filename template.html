@@ -50,6 +50,13 @@
                 <div id="step1">
                     <textarea id="EngTranslation" class="input-block-level" style="height:100px;" placeholder="Type here the English translation"></textarea>
                     <div id="answer"> <!-- Start DIV for the submission buttons -->
+                        <select id="types" class="input-block-level">
+                            <option value="default">The message ...</option>
+                            <option value="more_than_one_sentence">Has more than one sentence</option>
+                            <option value="privacy">Contains personal identifying information</option>
+                            <option value="location">Contains location information</option>
+                        </select>
+                        <br/>
                         <!-- If the user clicks this button, the saved answer will be value="yes"-->
                         <button class="btn btn-success btn-answer" value="translated"><i class="icon icon-white icon-thumbs-up"></i> Message Translated, go to next step</button>
                         <!-- If the user clicks this button, the saved answer will be value="no"-->
@@ -87,7 +94,8 @@ pybossa.taskLoaded(function(task, deferred) {
                             'arabic': 'None',
                             'english': 'spam',
                             'arabicLocation': 'None',
-                            'englishLocation': 'None'};
+                            'englishLocation': 'None',
+                            'type': 'None'};
 
         // load message from task 
         var msg = $('<p/>');
@@ -143,6 +151,14 @@ pybossa.presentTask(function(task, deferred) {
             if (typeof answer != 'undefined') {
                 //console.log(answer);
                 if (answer == 'translated') {
+                    var type = $("select#types").children(":selected").val();
+                    if (type == 'default') {
+                        alert("Please, choose one type from the dropdown");
+                        return;
+                    }
+                    else {
+                        task.info.answer.type = type;
+                    }
                     if ($("#EngTranslation").val()) {
                         task.info.answer.english = $("#EngTranslation").val();
                         $("#step1").hide();
