@@ -21,11 +21,16 @@ import os
 import sys
 import mailbox
 import email.Errors
+from email.utils import parsedate_tz
+from email.utils import mktime_tz
+from email.utils import formatdate
+from email.header import decode_header
+
 
 ch = logging.StreamHandler()
 logger.addHandler(ch)
 
-DEBUG = '--debug' in sys.argv
+DEBUG = ('--verbose' in sys.argv) or ('-v' in sys.argv)
 if DEBUG:
     logger.setLevel(10)
 
@@ -36,9 +41,10 @@ if DEBUG:
 THISDIR = os.path.abspath(os.curdir)
 
 # We create 'SyriaSpeakingGmail' part of path...
-SYRIASPEAKINGGMAIL = os.path.join(THISDIR, 'SyriaSpeakingGmail')
+SYRIASPEAKINGGMAIL = os.path.join(THISDIR, '..', '..', 'SyriaSpeakingGmail')
 if not os.path.exists(SYRIASPEAKINGGMAIL):
-    os.makedirs(SYRIASPEAKINGGMAIL)
+    logger.critical(
+        "You must create %s and run offlineimap.py." % SYRIASPEAKINGGMAIL)
 
 # ...but offlineimap.py creates 'INBOX' part of path.
 INBOX = os.path.join(SYRIASPEAKINGGMAIL, 'INBOX')
@@ -49,9 +55,117 @@ PROCESSED_MESSAGES_DIR = os.path.join(SYRIASPEAKINGGMAIL, 'PYBOSSA')
 # Save messages that have been sent to PyBossa.
 PROBLEMS_MESSAGES_DIR = os.path.join(SYRIASPEAKINGGMAIL, 'PROBLEMS')
 
+# http://ginstrom.com/scribbles/2007/11/19/parsing-multilingual-email-with-python/
+def get_charset2(message, default="ascii"):
+    """Get the message charset."""
+
+    charset = message.get_content_charset()
+    if not charset:
+        charset = message.get_charset()
+
+    if charset:
+        if charset.find('"')>0:
+            charset = charset[:charset.find('"')]
+        return charset
+    return default
+
+def get_multilingual_header(header_text, default="ascii"):
+    if not header_text is None:
+        try:
+            headers = header.decode_header(header_text)
+        except HeaderParseError:
+            return u"Error"
+
+        try:
+            header_sections = [
+                unicode(text, charset if charset and charset!='unknown' 
+                        else default, errors='replace') 
+                for text, charset in headers]
+        except LookupError:
+            header_sections = [unicode(text, default, errors='replace') 
+                               for text, charset in headers]
+
+        return u"".join(header_sections)
+    else:
+        return None
+
+def decode_email(raw_email):
+    raw_email = raw_email.replace('\r', ' ').replace(
+        '\n', ' ').replace(' ', ' ')
+    if re.match('=\?.*?\?[QqBb]\?.*\?=$', raw_email):
+        name, email = utils.parseaddr(get_multilingual_header(raw_email))
+    else:
+        name, email = utils.parseaddr(raw_email)
+        name = get_multilingual_header(name)
+        email = get_multilingual_header(email)
+
+    decoded_email = utils.formataddr((name, email))
+    return decoded_email
+
+
+from email.Iterators import typed_subpart_iterator
+def get_charset(message, default="ascii"):
+    """Get the message charset"""
+
+    if message.get_content_charset():
+        return message.get_content_charset()
+
+    if message.get_charset():
+        return message.get_charset()
+
+    return default
+
+def get_body(message):
+    """Get the body of the email message"""
+    
+    if message.is_multipart():
+        #get the plain text version only
+        text_parts = [part
+                      for part in typed_subpart_iterator(message,
+                                                         'text',
+                                                         'plain')]
+        body = []
+        for part in text_parts:
+            charset = get_charset(part, get_charset(message))
+            body.append(unicode(part.get_payload(decode=True),
+                                charset,
+                                "replace"))
+
+        return u"\n".join(body).strip()
+
+    else: # if it is not multipart, the payload will be a string
+          # representing the message body
+        body = unicode(message.get_payload(decode=True),
+                       get_charset(message),
+                       "replace")
+        return body.strip()
+
+
+
+def get_multilingual_subject(message):
+    return ''.join([unicode(t[0], t[1] or 'ascii') 
+                    for t in decode_header(message['Subject'])])
+
 
 def do_pybossa(message):
 
+    logger.debug('FROM:  %s' % message['from'])
+    logger.debug('SUBJECT:  %s' % get_multilingual_subject(message))
+    logger.debug('DATE:  %s' % message['date'])
+
+    ret = {'msgs_text': get_body(message),
+           'msgs_html': [],
+           'msg_subject': get_multilingual_subject(message),
+           'msg_date': message['date']}
+
+    return ret
+
+def do_pybossa_trash(message):
+
+    if message['from'].find('laith abdelali') < 0:
+        return {}
+
+    logger.debug('FROM:  %s' % message['from'])
     logger.debug('SUBJECT:  %s' % message['subject'])
     logger.debug('DATE:  %s' % message['date'])
 
@@ -67,13 +181,59 @@ def do_pybossa(message):
         content_type = m.get_content_type()
         logger.debug('CONTENT_TYPE:  %s' % content_type)
 
-        if content_type == 'multipart/alternative':
+        #if content_type in ('multipart/alternative', 'multipart/related'):
+        if content_type.find('multipart') > -1:
+            continue
+
+        if content_type in ('image/png'):
             continue
             
-        assert not m.is_multipart()
+        if m.is_multipart():
+            try:
+                # Ryan debugging on his machine.
+                from erpy.ipshell import ipshell
+                ipshell('here')
+            except:
+                print 'Perhaps there is another multipart issue?'
+            sys.exit()
+
+
+        if 'Content-Transfer-Encoding' not in m.keys():
+            if m.get_content_charset() not in ('iso-8859-1', 'utf-8'):
+
+                logger.warning("Could have some encode/decode issues.")
+
+                from erpy.ipshell import ipshell
+                ipshell('here encode/decode!')
+
+                continue
+
+        # ORIGINAL:
+        # payload = unicode(m.get_payload(decode=False))
+
+        if m.get_content_charset() == 'windows-1256':
+            logger.warning('Need to figure this out one day...')
+            continue
+            #payload = m.get_payload(decode=True)
+
+        else:
+            #payload = unicode(m.get_payload(decode=False))
+            payload = m.get_payload(decode=False)
+
+        # except UnicodeDecodeError:
+        #     pass  # Maintain original.
         
-        payload = unicode(m.get_payload(decode=False))
+        # unicode understanding!
+        # http://www.youtube.com/watch?v=sgHbC6udIqc
+
+        # print m.get_content_charset()
         logger.debug('PAYLOAD:  %s...' % payload[:30])
+
+        print payload
+        from erpy.ipshell import ipshell
+        ipshell('here')
+
+        
 
         if content_type == 'text/plain':
             texts.append(payload)
@@ -108,6 +268,10 @@ def process_msg(key, inbox, pybossa, problems):
     ret = do_pybossa(message)
     if len(ret) == 0:
         return None
+
+    # Debugging.
+    if inbox == pybossa:
+        return ret
 
     try:
         # Write copy to disk before removing original.
@@ -167,8 +331,19 @@ def get_emails():
     # problems_mbox = mailbox.mbox(PROBLEMS_MESSAGES_DIR + '_mbox', 
     #                              factory=None, create=True)
 
-    for key in inbox.iterkeys():
-        ret = process_msg(key, inbox, pybossa, problems)
+    #
+    # Uncomment to use existing messages.
+    #
+    ## inbox = pybossa
+
+    # Sort by date, but must parse date header to actual time object.
+    date_keys = []
+    for key, msg in inbox.iteritems():
+        # http://docs.python.org/2/library/email.util.html
+        date_keys.append((mktime_tz(parsedate_tz(msg['date'])), key))
+
+    for date_key in sorted(date_keys, key=lambda x: x[0]):
+        ret = process_msg(date_key[1], inbox, pybossa, problems)
         if ret:
             msgs.append(ret)
 

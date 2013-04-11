@@ -125,6 +125,15 @@ def run(app_config, options):
                          msgs_html=msg['msgs_html'],
                          msg_subject=msg['msg_subject'],
                          msg_date=msg['msg_date'])
+        
+        print task_info['msg_subject']
+        print len(pbclient.get_tasks(app.id))
+
+        # from erpy.ipshell import ipshell
+        # ipshell('here')
+        # sys.exit()
+        # return
+
         pbclient.create_task(app.id, task_info)
 
     def add_msg_tasks(app):
