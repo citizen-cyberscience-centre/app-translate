@@ -33,11 +33,12 @@ remoterepository = Remote
 
 [Repository Local]
 type = Maildir
-localfolders = ~/pybossa/SyriaSpeakingGmail
+localfolders = ~/SyriaSpeakingGmail
 
 [Repository Remote]
 type = Gmail
 remoteuser = syriaspeaking@gmail.com
+remotepass = do_not_put_in_version_control
 sslcacertfile = /etc/ssl/certs/ca-certificates.crt
 folderfilter = lambda folder: folder in ['INBOX']
 -----
