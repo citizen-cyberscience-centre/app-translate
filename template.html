@@ -50,27 +50,20 @@
                 <div id="step1">
                     <textarea id="EngTranslation" class="input-block-level" style="height:100px;" placeholder="Type here the English translation"></textarea>
                     <div id="answer"> <!-- Start DIV for the submission buttons -->
-
-
-
-                        <!-- <select id="types" class="input-block-level"> -->
-                        <!--     <option value="default">The message ...</option> -->
-                        <!--     <option value="more_than_one_sentence">Has more than one sentence</option> -->
-                        <!--     <option value="privacy">Contains personal identifying information</option> -->
-                        <!--     <option value="location">Contains location information</option> -->
-                        <!-- </select> -->
-
-
-<!-- http://www.scriptol.com/html5/button-on-off.php -->
-
-<button class="onoff" onclick="onoff_one_sent(this)"><div>no</div></button> Has more than one sentence? <br/>
-
-<button class="onoff" onclick="onoff_personal(this)"><div>no</div></button> Contains personal identifying information? <br/>
-
-<button class="onoff" onclick="onoff_loc_info(this)"><div>no</div></button> Contains location information? <br/>
-
-
-
+                        <form id="types">
+                            <label class="checkbox">
+                                <input type="checkbox" value="more_than_one_sentence"></input>
+                                <i class="icon-plus"></i> Has more than one sentence?
+                            </label>
+                            <label>
+                                <input type="checkbox" value="privacy"></input>
+                                <i class="icon-eye-open"></i> Contains personal identifying information?
+                            </label>
+                            <label>
+                                <input type="checkbox" value="location_info"></input>
+                                <i class="icon-globe"></i> Contains location information?
+                            </label>
+                        </form>
                         <br/>
                         <!-- If the user clicks this button, the saved answer will be value="yes"-->
                         <button class="btn btn-success btn-answer" value="translated"><i class="icon icon-white icon-thumbs-up"></i> Message Translated, go to next step</button>
@@ -92,49 +85,6 @@
 </div>
 <script>
 
-var btn_one_sentence=0;
-var btn_personal_info=0;
-var btn_loc_info=0;
-function onoff(element, buttonstate)
-{
-  var blabel, bstyle, bcolor;
-  if(buttonstate)
-  {
-    blabel="yes";
-    bstyle="green";
-    bcolor="lightgreen";
-  }
-  else
-  {
-    blabel="no";
-    bstyle="lightgray";
-    bcolor="gray";
-  }
-  var child=element.firstChild;
-  child.style.background=bstyle;
-  child.style.color=bcolor;
-  child.innerHTML=blabel;
-}
-function onoff_one_sent(element)
-{
-  btn_one_sentence= 1 - btn_one_sentence;
-  onoff(element, btn_one_sentence);
-}
-function onoff_personal(element)
-{
-  btn_personal_info= 1 - btn_personal_info;
-  onoff(element, btn_personal_info);
-}
-function onoff_loc_info(element)
-{
-  btn_loc_info= 1 - btn_loc_info;
-  onoff(element, btn_loc_info);
-}
-
-
-
-
-
 function loadUserProgress() {
     pybossa.userProgress('translate').done(function(data){
         var pct = Math.round((data.done*100)/data.total);
@@ -154,12 +104,14 @@ pybossa.taskLoaded(function(task, deferred) {
                             'english': 'spam',
                             'arabicLocation': 'None',
                             'englishLocation': 'None',
-                            'type': 'None'};
+                            'more_than_one_sentence': 0,
+                            'privacy_issues': 0,
+                            'location_info': 0};
 
         // load message from task 
         var msg = $('<p/>');
         var header = "<h2>Date: " + task.info.msg_date + "<br/>Subject: " + task.info.msg_subject + "</h2><hr>";
-	var all_html = '';
+        var all_html = '';
         var all_text = '';
         msg.attr("dir", "rtl");
         // continue as soon as the message is loaded
@@ -211,17 +163,18 @@ pybossa.presentTask(function(task, deferred) {
             if (typeof answer != 'undefined') {
                 //console.log(answer);
                 if (answer == 'translated') {
-
-
-                    var type = $("select#types").children(":selected").val();
-                    if (type == 'default') {
-                        alert("Please, choose one type from the dropdown");
-                        return;
-                    }
-                    else {
-                        task.info.answer.type = type;
-                    }
-
+                    $("#types :checked").each(
+                        function() {
+                        if ($(this).val() == 'more_than_one_sentence') {
+                            task.info.answer.more_than_one_sentence = 1;
+                        }
+                        if ($(this).val() == 'privacy') {
+                            task.info.answer.privacy = 1;
+                        }
+                        if ($(this).val() == 'location_info') {
+                            task.info.answer.location_info= 1;
+                        }
+                    });
 
                     if ($("#EngTranslation").val()) {
                         task.info.answer.english = $("#EngTranslation").val();
