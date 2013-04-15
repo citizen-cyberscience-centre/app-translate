@@ -157,6 +157,7 @@ pybossa.presentTask(function(task, deferred) {
         $('#EngTranslation').val("");
         $('#arabicLocation').val("");
         $('#englishLocation').val("");
+        $("input:checkbox").removeAttr("checked");
         $("#question").html(task.info.question);
         $('.btn-answer').off('click').on('click', function(evt) {
             var answer = $(evt.target).attr("value");
