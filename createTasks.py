@@ -75,6 +75,14 @@ def handle_arguments():
                       metavar="APP-CONFIG",
                       default="app.json")
 
+    parser.add_option("--user",
+                      dest="user",
+                      help="HTTP User")
+
+    parser.add_option("--password",
+                      dest="password",
+                      help="HTTP Password")
+
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose")
     (options, args) = parser.parse_args()
 
@@ -87,6 +95,7 @@ def handle_arguments():
                       application and tasks in PyBossa")
 
     return options
+
 
 def get_configuration():
     options = handle_arguments()
@@ -125,7 +134,7 @@ def run(app_config, options):
                          msgs_html=msg['msgs_html'],
                          msg_subject=msg['msg_subject'],
                          msg_date=msg['msg_date'])
-        
+
         print task_info['msg_subject']
         print len(pbclient.get_tasks(app.id))
 
@@ -168,7 +177,7 @@ def run(app_config, options):
         setup_app()
 
     if options.update_tasks:
-        def tasks(app): 
+        def tasks(app):
             offset = 0
             limit = 100
             while True:
